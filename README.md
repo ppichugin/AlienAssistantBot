@@ -1,4 +1,4 @@
-### Alien Assistant - Telegram Bot
+# "Alien Assistant" - Telegram Bot
 
 ---
 
@@ -6,4 +6,8 @@ This bot accepts currency pair (like USD/EUR) and provides their current exchang
 
 ---
 
-Note: config.env file is not included into this 
+### Note: config.env file is not included. It contains two environment variables:
+```
+TELEGRAM_APITOKEN=...
+APILayerKey=...
+```
