@@ -68,7 +68,7 @@ func main() {
 			case "help":
 				msg.Text = helpMessage
 			case "sayhi":
-				msg.Text = "Hi, there! :smile:"
+				msg.Text = "Hi, there! 😃"
 			case "status":
 				msg.Text = "I'm ok."
 			default:
