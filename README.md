@@ -4,7 +4,7 @@
 ### The functionality:
 
 1. This Telegram-bot receives currency-pair (like USD/EUR) and provides their current exchange rate. 
-2. to be continued...
+2. Secrets keeper ... (in process)
 
 ---
 
@@ -42,9 +42,11 @@ docker run -it -d petrodev/alien-assistant-bot:latest
 
 4. Possible commands:
    * /start - simply start talking to bot
-   * just send currency pair in format `USD/EUR` and get the current exchange rate
+   * /menu - Main menu
    * /help - Help message
+   * /rate - Send currency pair in format `USD/EUR` and get the current exchange rate
    * /sayhi - Get nice "Hi" :)
+   * to be continued..
 
 
 5. Enjoy with **Alien Assistant bot**!
