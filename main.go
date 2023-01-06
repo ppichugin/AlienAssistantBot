@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 
 	tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/spf13/viper"
@@ -16,13 +17,14 @@ import (
 const (
 	baseURL = "https://api.apilayer.com/exchangerates_data/latest"
 
-	startMessage = "Hi there! I'm a currency exchange rate bot. Send me a currency pair (e.g. USD/EUR) and I'll get the current exchange rate for you."
-	helpMessage  = "To get the current exchange rate for a currency pair, just send me the pair (e.g. USD/EUR). \n" +
-		"I'll do my best to get the most recent rate for you.\n" +
-		"Other commands: \n" +
-		"/status - check status,\n" +
-		"/sayhi - just welcoming message :)"
-	errMessage = "I'm sorry, I didn't understand that command. Use /start to get started or /help to see a list of available commands."
+	startMessage = "Hi there! I'm an Alien Assistant bot. I can help you with exchange rates and keep your secrets"
+	helpMessage  = "Menu: \n" +
+		"/menu 		- Main menu\n" +
+		"/status 	- Check status,\n" +
+		"/sayhi 	- Nice welcoming message :)\n" +
+		"/rate 		- Exchange rates on the currency pair like 'USD/EUR'"
+	errMessage = "I'm sorry, I didn't understand that command. Use /help to see a list of available commands."
+	getRateMsg = "Please enter currency pair in format 'USD/EUR'"
 )
 
 var globConf config.Configuration
@@ -60,37 +62,68 @@ func main() {
 			continue
 		}
 
+		msg := tgBotApi.NewMessage(update.Message.Chat.ID, "")
 		if update.Message.IsCommand() {
-			msg := tgBotApi.NewMessage(update.Message.Chat.ID, "")
 			switch update.Message.Command() {
 			case "start":
 				msg.Text = startMessage
 			case "help":
 				msg.Text = helpMessage
 			case "sayhi":
-				msg.Text = "Hi, there! 😃"
+				msg.Text = fmt.Sprintf("Hi, %s 😃!", update.SentFrom().FirstName)
 			case "status":
 				msg.Text = "I'm ok."
+			case "rate":
+				getRates(&update, bot, &updates)
+				msg.Text = helpMessage
+			case "menu":
+				msg.Text = helpMessage
 			default:
 				msg.Text = errMessage
 			}
 			bot.Send(msg)
 		} else {
-			currencyPair := update.Message.Text
-
-			exchangeRate, err := getExchangeRate(currencyPair)
-			if err != nil {
-				msg := tgBotApi.NewMessage(update.Message.Chat.ID,
-					fmt.Sprintf("I'm sorry, I was unable to get the exchange rate for %s. Please make sure you've entered a valid currency pair.", currencyPair))
-				bot.Send(msg)
-				continue
-			}
-
-			msg := tgBotApi.NewMessage(update.Message.Chat.ID,
-				fmt.Sprintf("The current exchange rate for %s is %.2f.", currencyPair, exchangeRate))
+			msg.Text = "Please use command style starts with '/'. For example, /status"
 			bot.Send(msg)
 		}
 	}
+}
+
+func isValidPair(s string) bool {
+	re := regexp.MustCompile("^[a-zA-Z]+/[a-zA-Z]+$") // `EUR/USD`
+	return re.MatchString(s)
+}
+
+func getRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI, updates *tgBotApi.UpdatesChannel) {
+
+	sendMessage(update, bot, getRateMsg)
+	var currencyPair string
+
+outer:
+	for {
+		select {
+		case upd := <-*updates:
+			currencyPair = upd.Message.Text
+			if !isValidPair(currencyPair) {
+				sendMessage(&upd, bot, "Incorrect currency pair. Please repeat in format 'XXX/YYY'")
+				continue
+			}
+			sendMessage(&upd, bot, fmt.Sprintf("%s, here we are!\n", upd.SentFrom().FirstName))
+			break outer
+		}
+	}
+
+	exchangeRate, err := getExchangeRate(currencyPair)
+	if err != nil {
+		sendMessage(update, bot, fmt.Sprintf("Something went wrong. Error: %v", err))
+		return
+	}
+	sendMessage(update, bot, fmt.Sprintf("The current exchange rate for %s is %.2f.", currencyPair, exchangeRate))
+}
+
+func sendMessage(update *tgBotApi.Update, bot *tgBotApi.BotAPI, txt string) {
+	msg := tgBotApi.NewMessage(update.Message.Chat.ID, txt)
+	bot.Send(msg)
 }
 
 func getExchangeRate(currencyPair string) (float64, error) {
