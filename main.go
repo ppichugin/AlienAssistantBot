@@ -44,7 +44,7 @@ func main() {
 			continue
 		}
 
-		msg := tgBotApi.NewMessage(update.Message.Chat.ID, "")
+		msg := tgBotApi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
