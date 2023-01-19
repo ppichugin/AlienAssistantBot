@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"github.com/ppichugin/AlienAssistantBot/config"
-	"github.com/ppichugin/AlienAssistantBot/models"
+	"github.com/ppichugin/AlienAssistantBot/model"
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
-func GetRates(update *tgbotapi.Update, bot *tgbotapi.BotAPI, updates *tgbotapi.UpdatesChannel) {
+func GetRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI, updates *tgBotApi.UpdatesChannel) {
 
 	utils.SendMessage(update, bot, config.GetRateMsg)
 	var currencyPair string
@@ -21,6 +21,10 @@ outer:
 	for {
 		select {
 		case upd := <-*updates:
+			if upd.Message.Command() == "menu" {
+				utils.SendMessage(update, bot, fmt.Sprintf("Going to main menu."))
+				return
+			}
 			currencyPair = upd.Message.Text
 			if !utils.IsValidPair(currencyPair) {
 				utils.SendMessage(&upd, bot, "Incorrect currency pair. Please repeat in format 'XXX/YYY'")
@@ -56,7 +60,7 @@ func getExchangeRate(currencyPair string) (float64, error) {
 		return 0, err
 	}
 
-	var exchangeRates models.ExchangeRates
+	var exchangeRates model.ExchangeRates
 	err = json.NewDecoder(resp.Body).Decode(&exchangeRates)
 	if err != nil {
 		return 0, err

@@ -23,6 +23,11 @@ func main() {
 	config.GlobConf = config.Configuration{
 		TelegramAPIToken:   x.GetString("TELEGRAM_APITOKEN"),
 		ExchangeRateAPIKey: x.GetString("APILayerKey"),
+		HostDB:             x.GetString("hostDB"),
+		PortDB:             x.GetString("portDB"),
+		UserDB:             x.GetString("userDB"),
+		PasswordDB:         x.GetString("passwordDB"),
+		NameDB:             x.GetString("dbname"),
 	}
 
 	bot, err := tgBotApi.NewBotAPI(config.GlobConf.TelegramAPIToken)
@@ -58,6 +63,9 @@ func main() {
 			case "rate":
 				services.GetRates(&update, bot, &updates)
 				msg.Text = config.HelpMsg
+			case "secret":
+				services.SecretKeeper(&update, bot, &updates)
+				msg.Text = config.HelpMsg
 			case "menu":
 				msg.Text = config.HelpMsg
 			default:
@@ -65,7 +73,7 @@ func main() {
 			}
 			bot.Send(msg)
 		} else {
-			msg.Text = "Please use command style starts with '/'. For example, /status"
+			msg.Text = config.IncorrectCmdFormat
 			bot.Send(msg)
 		}
 	}
