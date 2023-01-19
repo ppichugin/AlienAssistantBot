@@ -125,13 +125,11 @@ func Save(args []string, bot *tgBotApi.BotAPI, update *tgBotApi.Update, db *sql.
 		owner = args[6]
 	}
 
-	// Encrypt the secret
-	key := []byte("TEST_KEYTEST_KEYTEST_KEYTEST_KEY") // Testing encryption key
-
 	// Generate a cryptographic key from the user's passphrase
 	// The key that is generated from this function is of 32 bytes (AES-256 bits)
 	key, err := scrypt.Key([]byte(password), nil, 1<<14, 8, 1, 32)
 	if err != nil {
+		//TODO: handle error & change to util method SendMessage
 		msg := tgBotApi.NewMessage(m.Chat.ID, "Unable to encrypt the password. Call admin")
 		bot.Send(msg)
 
@@ -215,12 +213,14 @@ func (s *Secret) Decrypt(key []byte) error {
 		return err
 	}
 
+	stream := cipher.NewCTR(block, s.IV)
+
 	passwordBytes, err := base64.StdEncoding.DecodeString(s.Password)
 	if err != nil {
 		return err
 	}
 
-	stream := cipher.NewCTR(block, s.IV)
+	passwordBytes = unpad(passwordBytes)
 
 	// Decrypt the password
 	stream.XORKeyStream(passwordBytes, passwordBytes)
@@ -234,4 +234,11 @@ func pad(src []byte) []byte {
 	padding := aes.BlockSize - len(src)%aes.BlockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(src, padtext...)
+}
+
+// unpad removes padding from input slice, so it's length is multiple of AES block size
+func unpad(src []byte) []byte {
+	length := len(src)
+	unpadding := int(src[length-1])
+	return src[:(length - unpadding)]
 }
