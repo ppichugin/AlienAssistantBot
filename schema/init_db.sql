@@ -1,7 +1,10 @@
+-- install extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- create schema
 CREATE TABLE secrets
 (
-    id              serial PRIMARY KEY,
+    id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     name            varchar(255) NOT NULL,
     username        varchar(255) NOT NULL,
     password        bytea        NOT NULL,
