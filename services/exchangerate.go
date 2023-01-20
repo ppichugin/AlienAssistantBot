@@ -12,7 +12,7 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
-func GetRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI, updates *tgBotApi.UpdatesChannel) {
+func GetRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI) {
 
 	utils.SendMessage(update, bot, config.GetRateMsg)
 	var currencyPair string
@@ -20,7 +20,7 @@ func GetRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI, updates *tgBotApi.U
 outer:
 	for {
 		select {
-		case upd := <-*updates:
+		case upd := <-*config.GlobConf.BotUpdatesCh:
 			if upd.Message.Command() == "menu" {
 				utils.SendMessage(update, bot, fmt.Sprintf("Going to main menu."))
 				return

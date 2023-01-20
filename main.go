@@ -43,6 +43,7 @@ func main() {
 	updateConfig.Timeout = 60
 
 	updates := bot.GetUpdatesChan(updateConfig)
+	config.GlobConf.BotUpdatesCh = &updates
 
 	for update := range updates {
 		if update.Message == nil {
@@ -61,10 +62,10 @@ func main() {
 			case "status":
 				msg.Text = "I'm ok."
 			case "rate":
-				services.GetRates(&update, bot, &updates)
+				services.GetRates(&update, bot)
 				msg.Text = config.HelpMsg
 			case "secret":
-				services.SecretKeeper(&update, bot, &updates)
+				services.SecretKeeper(&update, bot)
 				msg.Text = config.HelpMsg
 			case "menu":
 				msg.Text = config.HelpMsg
