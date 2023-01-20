@@ -1,5 +1,7 @@
 package config
 
+import tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
 const (
 	RatesAPIUrl = "https://api.apilayer.com/exchangerates_data/latest"
 
@@ -29,6 +31,7 @@ type Configuration struct {
 	UserDB             string
 	PasswordDB         string
 	NameDB             string
+	BotUpdatesCh       *tgBotApi.UpdatesChannel
 }
 
 var GlobConf Configuration
