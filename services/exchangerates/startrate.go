@@ -1,4 +1,4 @@
-package services
+package exchangerates
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
-func GetRates(update *tgBotApi.Update, bot *tgBotApi.BotAPI) {
-
+func StartRate(update *tgBotApi.Update) {
+	bot := config.GlobConf.BotAPIConfig
 	utils.SendMessage(update, bot, config.GetRateMsg)
 	var currencyPair string
 

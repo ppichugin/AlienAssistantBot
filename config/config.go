@@ -32,6 +32,7 @@ type Configuration struct {
 	PasswordDB         string
 	NameDB             string
 	BotUpdatesCh       *tgBotApi.UpdatesChannel
+	BotAPIConfig       *tgBotApi.BotAPI
 }
 
 var GlobConf Configuration

@@ -8,7 +8,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ppichugin/AlienAssistantBot/config"
-	"github.com/ppichugin/AlienAssistantBot/services"
+	"github.com/ppichugin/AlienAssistantBot/services/exchangerates"
+	"github.com/ppichugin/AlienAssistantBot/services/secretkeeper"
 )
 
 func main() {
@@ -44,6 +45,7 @@ func main() {
 
 	updates := bot.GetUpdatesChan(updateConfig)
 	config.GlobConf.BotUpdatesCh = &updates
+	config.GlobConf.BotAPIConfig = bot
 
 	for update := range updates {
 		if update.Message == nil {
@@ -62,10 +64,10 @@ func main() {
 			case "status":
 				msg.Text = "I'm ok."
 			case "rate":
-				services.GetRates(&update, bot)
+				exchangerates.StartRate(&update)
 				msg.Text = config.HelpMsg
 			case "secret":
-				services.SecretKeeper(&update, bot)
+				secretkeeper.StartSecret(&update)
 				msg.Text = config.HelpMsg
 			case "menu":
 				msg.Text = config.HelpMsg
