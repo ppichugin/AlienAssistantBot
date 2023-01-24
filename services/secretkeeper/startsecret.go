@@ -1,8 +1,6 @@
 package secretkeeper
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -11,6 +9,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/ppichugin/AlienAssistantBot/config"
+	"github.com/ppichugin/AlienAssistantBot/model"
 	"github.com/ppichugin/AlienAssistantBot/utils"
 
 	_ "github.com/lib/pq"
@@ -29,46 +28,41 @@ type Secret struct {
 }
 
 func StartSecret(update *tgBotApi.Update) {
-	bot := config.GlobConf.BotAPIConfig
-	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.GlobConf.HostDB,
-		config.GlobConf.PortDB,
-		config.GlobConf.UserDB,
-		config.GlobConf.PasswordDB,
-		config.GlobConf.NameDB)
-	db, err := sql.Open("postgres", psqlInfo)
+	chatID := update.Message.Chat.ID
+
+	err := model.NewDB(3)
 	if err != nil {
 		log.Fatal(err)
 	}
+	db := config.GlobConf.Database
 	defer db.Close()
 
-	utils.SendMessage(update, bot, "You are in Secrets Keeper mode")
-	utils.SendMessage(update, bot, config.KeeperHelpMsg)
-	var cmd string
+	utils.SendMessage(chatID, "You are in Secrets Keeper mode")
+	utils.SendMessage(chatID, config.KeeperHelpMsg)
 	var args = make([]string, 0, 7)
 
-	// Loop to listen commands
-	for {
-		select {
-		case upd := <-*config.GlobConf.BotUpdatesCh:
-			cmd = upd.Message.Text
-			if !upd.Message.IsCommand() {
-				utils.SendMessage(update, bot, config.IncorrectCmdFormat)
-				utils.SendMessage(update, bot, "Please repeat")
-				break
-			}
-			args = append(args, strings.Split(cmd, " ")...)
+	// Listen commands in secrets mode
+	for upd := range *config.GlobConf.BotUpdatesCh {
+		if update.Message == nil {
+			continue
+		}
+		if !upd.Message.IsCommand() {
+			utils.SendMessage(chatID, config.IncorrectCmdFormat)
+			utils.SendMessage(chatID, "Please repeat")
+			continue
+		}
+		if update.Message.IsCommand() {
+			args = append(args, strings.Split(upd.Message.Text, " ")...)
 			key := args[0]
-			cmd = key[1:]
-
+			cmd := key[1:]
 			switch cmd {
 			case "save":
-				err := Save(args, bot, &upd, db)
+				err := Save(args, &upd)
 				if err != nil {
-					log.Println("Error saving: ", err)
+					log.Println("Error saving secret: ", err)
 				}
 			case "get":
-				err := Get(args, bot, &upd, db)
+				err := Get(args, &upd)
 				if err != nil {
 					log.Println("Error getting secret: ", err)
 				}

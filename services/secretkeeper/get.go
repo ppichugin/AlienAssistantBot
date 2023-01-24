@@ -2,6 +2,7 @@ package secretkeeper
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -13,19 +14,22 @@ import (
 )
 
 // Get retrieves secret from DB and decrypts it
-func Get(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.DB) error {
-	// Parse the command arguments
-	m := update.Message
-	if len(args) < 2 {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Invalid command. Use /get <name>")
-		bot.Send(msg)
-		return fmt.Errorf(msg.Text)
-	}
+func Get(args []string, update *tgbotapi.Update) error {
+	bot := config.GlobConf.BotAPIConfig
+	db := config.GlobConf.Database
+	chatID := update.Message.Chat.ID
 
+	// Parse the command arguments
+	if len(args) < 2 {
+		text := "invalid command. Use /get <name>"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf(text)
+	}
 	name := args[1]
 	owner := update.SentFrom().UserName
 
-	// TODO: check if more then one secret found with the same name
+	// TODO: check if more than one secret found with the same name
+
 	// Retrieve the secret from the database
 	row := db.QueryRow(
 		"SELECT id, name, username, password, iv, expiration, reads_remaining, owner FROM secrets WHERE name=$1 AND owner=$2",
@@ -43,84 +47,83 @@ func Get(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.D
 		&secret.ReadsRemaining,
 		&secret.Owner,
 	)
-	//todo - remove after checking
-	log.Println("", secret)
 
-	if err == sql.ErrNoRows {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Secret not found")
-		bot.Send(msg)
-		return fmt.Errorf(msg.Text)
+	if errors.Is(err, sql.ErrNoRows) {
+		text := "secret not found"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf("%s: no rows in db (%s)", text, err.Error())
 	}
 	if err != nil {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Error retrieving secret")
-		bot.Send(msg)
-		return fmt.Errorf(msg.Text)
+		text := "error retrieving secret"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
 	}
 
-	// Check if the secret has expired
+	// Check if the secret has expired, and if so - delete it.
 	if secret.Expiration.Before(time.Now()) {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Secret has expired")
-		bot.Send(msg)
-		_, err := db.Exec("DELETE FROM secrets WHERE id=$1", secret.ID)
-		if err != nil {
-			msg := tgbotapi.NewMessage(m.Chat.ID, "Error deleting secret")
-			bot.Send(msg)
-			return fmt.Errorf(msg.Text)
+		text := "secret has expired"
+		utils.SendMessage(chatID, text)
+		if _, err := db.Exec("DELETE FROM secrets WHERE id=$1", secret.ID); err != nil {
+			text := "Error deleting secret"
+			utils.SendMessage(chatID, text)
+			return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
 		}
-		return fmt.Errorf(msg.Text)
+		return fmt.Errorf("%s: and deleted from DB (%s)", text, err.Error())
 	}
 
 	// Check if the secret is for a single read only
 	if secret.ReadsRemaining == 1 {
 		_, err := db.Exec("DELETE FROM secrets WHERE id=$1", secret.ID)
 		if err != nil {
-			msg := tgbotapi.NewMessage(m.Chat.ID, "Error deleting secret")
-			bot.Send(msg)
-			return fmt.Errorf(msg.Text)
-		}
-	} else if secret.ReadsRemaining > 1 {
-		// Decrement the number of reads remaining
-		_, err := db.Exec("UPDATE secrets SET reads_remaining = reads_remaining - 1 WHERE id=$1", secret.ID)
-		if err != nil {
-			msg := tgbotapi.NewMessage(m.Chat.ID, "Error updating secret.ReadsRemaining")
-			bot.Send(msg)
-			return fmt.Errorf(msg.Text)
+			text := "Error deleting secret"
+			utils.SendMessage(chatID, text)
+			return fmt.Errorf("%s: something went wrong in DB (%w)", text, err)
 		}
 	}
 
-	utils.SendMessage(update, bot, fmt.Sprintf("Enter passphrase to decrypt"))
+	// Decrement the number of reads remaining
+	if secret.ReadsRemaining > 1 {
+		_, err := db.Exec("UPDATE secrets SET reads_remaining = reads_remaining - 1 WHERE id=$1", secret.ID)
+		if err != nil {
+			text := "Error updating ReadsRemaining"
+			utils.SendMessage(chatID, text)
+			return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
+		}
+	}
+
+	utils.SendMessage(chatID, "Enter passphrase to decrypt the secret:")
 	var passphrase string
 	for upd := range *config.GlobConf.BotUpdatesCh {
-		if upd.Message == nil { // ignore any non-Message updates
+		if upd.Message == nil {
 			continue
 		}
 		passphrase = upd.Message.Text
 		break
 	}
 
-	// Generate encryption key based on the given passphrase
-	key, err := GenCryptoKey(passphrase, m, bot)
+	// Generate encryption encryptionKey based on the given passphrase
+	encryptionKey, err := GenCryptoKey(passphrase, bot)
 	if err != nil {
-		// For tests TODO remove
-		bot.Send(tgbotapi.NewMessage(m.Chat.ID, fmt.Sprintf("Error in GenCryptoKey: %s", err)))
+		log.Println(err)
 		return err
 	}
 
 	// Decrypt the secret
-	if err := secret.Decrypt(key, passphrase); err != nil {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Error decrypting secret")
-		bot.Send(msg)
-		// For tests TODO remove
-		bot.Send(tgbotapi.NewMessage(m.Chat.ID, fmt.Sprintf("Error: %s", err)))
-		return fmt.Errorf(msg.Text)
+	if err := secret.Decrypt(encryptionKey, passphrase); err != nil {
+		text := "Error decrypting secret"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf("%s: something went wrong Decrypt (%w)", text, err)
 	}
+
+	// TODO add structure with String() method for decrypted secrets?
 
 	// Send the secret back to the user
 	response := fmt.Sprintf("Username: %s\nPassword: %s", secret.Username, secret.Password)
 	if secret.Owner != "" {
 		response += fmt.Sprintf("\nOwner: %s", secret.Owner)
 	}
-	msg := tgbotapi.NewMessage(m.Chat.ID, response)
-	bot.Send(msg)
+	utils.SendMessage(chatID, response)
+	secret = Secret{}
+
 	return nil
 }

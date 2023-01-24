@@ -22,6 +22,7 @@ func Duration(str string) time.Duration {
 	second := int64(time.Second)
 	return time.Duration(years*24*365*hour + months*30*24*hour + days*24*hour + hours*hour + minutes*minute + seconds*second)
 }
+
 func parseInt64(value string) int64 {
 	if len(value) == 0 {
 		return 0

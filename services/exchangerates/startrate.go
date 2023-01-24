@@ -3,6 +3,8 @@ package exchangerates
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 
 	tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -12,42 +14,44 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
+// StartRate represents service to provide the current exchange rate for currency pairs
 func StartRate(update *tgBotApi.Update) {
-	bot := config.GlobConf.BotAPIConfig
-	utils.SendMessage(update, bot, config.GetRateMsg)
+	chatID := update.Message.Chat.ID
+	utils.SendMessage(chatID, config.GetRateMsg)
 	var currencyPair string
 
-outer:
-	for {
-		select {
-		case upd := <-*config.GlobConf.BotUpdatesCh:
-			if upd.Message.Command() == "menu" {
-				utils.SendMessage(update, bot, fmt.Sprintf("Going to main menu."))
-				return
-			}
-			currencyPair = upd.Message.Text
-			if !utils.IsValidPair(currencyPair) {
-				utils.SendMessage(&upd, bot, "Incorrect currency pair. Please repeat in format 'XXX/YYY'")
-				continue
-			}
-			utils.SendMessage(&upd, bot, fmt.Sprintf("%s, here is the current exchange rate:", upd.SentFrom().FirstName))
-			break outer
+	for upd := range *config.GlobConf.BotUpdatesCh {
+		chatID := upd.Message.Chat.ID
+		if upd.Message.Command() == "menu" {
+			utils.SendMessage(chatID, "Going to main menu.")
+			return
 		}
+		currencyPair = upd.Message.Text
+		if !utils.IsValidPair(currencyPair) {
+			utils.SendMessage(chatID, "Incorrect currency pair. Please repeat in format 'XXX/YYY'")
+			continue
+		}
+		utils.SendMessage(chatID, fmt.Sprintf("%s, here is the exchange rate you requested: ", upd.SentFrom().FirstName))
+		break
 	}
 
 	exchangeRate, err := getExchangeRate(currencyPair)
 	if err != nil {
-		utils.SendMessage(update, bot, fmt.Sprintf("Something went wrong. Error: %v", err))
+		log.Println(err)
+		utils.SendMessage(chatID, fmt.Sprintf("Error: %v", err))
 		return
 	}
-	utils.SendMessage(update, bot, fmt.Sprintf(" %s is %.2f.", currencyPair, exchangeRate))
-	utils.SendMessage(update, bot, fmt.Sprintf("Going to main menu."))
+	utils.SendMessage(chatID, fmt.Sprintf(" %s is %.2f.", currencyPair, exchangeRate))
+	utils.SendMessage(chatID, "Going to main menu.")
 }
 
 func getExchangeRate(currencyPair string) (float64, error) {
-	url := fmt.Sprintf("%s?base=%s&symbols=%s", config.RatesAPIUrl, currencyPair[0:3], currencyPair[4:7])
+	url := fmt.Sprintf("%s?base=%s&symbols=%s",
+		config.RatesAPIUrl, currencyPair[0:3], currencyPair[4:7])
 
 	client := &http.Client{}
+	// TODO: check for  Transport, CheckRedirect, Jar, Timeout on Client
+
 	req, err := http.NewRequest("GET", url, nil)
 	req.Header.Set("apikey", config.GlobConf.ExchangeRateAPIKey)
 	if err != nil {
@@ -55,10 +59,12 @@ func getExchangeRate(currencyPair string) (float64, error) {
 	}
 
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		return 0, err
 	}
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(resp.Body)
 
 	var exchangeRates model.ExchangeRates
 	err = json.NewDecoder(resp.Body).Decode(&exchangeRates)

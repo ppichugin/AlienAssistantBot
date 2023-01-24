@@ -1,41 +1,37 @@
 package secretkeeper
 
 import (
-	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"github.com/ppichugin/AlienAssistantBot/config"
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
 // Save encrypts secret and saves it to DB
-func Save(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.DB) error {
-	m := update.Message
+func Save(args []string, update *tgbotapi.Update) error {
+	bot := config.GlobConf.BotAPIConfig
+	db := config.GlobConf.Database
+	chatID := update.Message.Chat.ID
 	if len(args) < 4 {
-		msg := tgbotapi.NewMessage(m.Chat.ID,
-			"Invalid command. Use /save <name> <username> <password> [expiration - P{x}Y{x}M{x}DT{x}M{x}S] [reads] [owner]")
-		bot.Send(msg)
-		return fmt.Errorf(msg.Text)
+		text := "Invalid command. Use /save <name> <username> <passphrase> [expiration - P{x}Y{x}M{x}DT{x}M{x}S] [reads] [owner]"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf("incorrect syntax: %s", text)
 	}
 
 	name := args[1]
 	username := args[2]
-	password := args[3]
+	passphrase := args[3]
+
+	// TODO: remove any double/triple spaces between args
 
 	expiration := time.Date(3000, time.December, 31, 23, 59, 0, 0, time.UTC)
 	if len(args) > 4 {
 		d := utils.Duration(args[4])
-
-		//TODO: if not specified - ?
-
-		//if err != nil {
-		//	msg := tgBotApi.NewMessage(m.Chat.ID, "Error parsing expiration")
-		//	bot.Send(msg)
-		//	return fmt.Errorf(msg.Text + ": " + err.Error())
-		//}
 		expiration = time.Now().Add(d)
 	}
 
@@ -43,14 +39,14 @@ func Save(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.
 	if len(args) > 5 {
 		n, err := strconv.Atoi(args[5])
 		if err != nil {
-			msg := tgbotapi.NewMessage(m.Chat.ID, "Error parsing reads")
-			bot.Send(msg)
-			return fmt.Errorf(msg.Text + ": " + err.Error())
+			text := "Error parsing reads"
+			utils.SendMessage(chatID, text)
+			return fmt.Errorf("%s: something wrong in duration (%w)", text, err)
 		}
 		reads = n
 	}
 
-	// If the owner is not specified - then it will be a user itself
+	// If the owner is not specified, then the current user will be saved
 	var owner string
 	if len(args) > 6 {
 		owner = args[6]
@@ -60,30 +56,25 @@ func Save(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.
 	}
 
 	// Generate encryption key based on the given passphrase
-	key, err := GenCryptoKey(password, m, bot)
+	encryptionKey, err := GenCryptoKey(passphrase, bot)
 	if err != nil {
-		// For tests TODO remove
-		bot.Send(tgbotapi.NewMessage(m.Chat.ID, fmt.Sprintf("Error in GenCryptoKey: %s", err)))
+		log.Println(err)
+		utils.SendMessage(chatID, err.Error())
 		return err
 	}
 
 	secret := Secret{
 		Name:           name,
 		Username:       username,
-		Password:       password,
+		Password:       passphrase,
 		Expiration:     expiration,
 		ReadsRemaining: reads,
 		Owner:          owner,
 	}
 
-	if err := secret.Encrypt(key); err != nil {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Error encrypting password")
-		bot.Send(msg)
-
-		// For tests TODO remove
-		bot.Send(tgbotapi.NewMessage(m.Chat.ID, fmt.Sprintf("Error: %s", err)))
-
-		return fmt.Errorf(msg.Text + ": " + err.Error())
+	if err := secret.Encrypt(encryptionKey); err != nil {
+		utils.SendMessage(chatID, err.Error())
+		return fmt.Errorf("error in encryption module: %w", err)
 	}
 
 	// Save the secret to the database
@@ -98,12 +89,12 @@ func Save(args []string, bot *tgbotapi.BotAPI, update *tgbotapi.Update, db *sql.
 		secret.Owner,
 	)
 	if err != nil {
-		msg := tgbotapi.NewMessage(m.Chat.ID, "Error saving secret")
-		bot.Send(msg)
-		return fmt.Errorf(msg.Text + ": " + err.Error())
+		text := "Error saving secret"
+		utils.SendMessage(chatID, text)
+		return fmt.Errorf("%s: something went wrong in DB (%w)", text, err)
 	}
+	utils.SendMessage(chatID, "Secret saved successfully")
+	secret = Secret{}
 
-	msg := tgbotapi.NewMessage(m.Chat.ID, "Secret saved successfully")
-	bot.Send(msg)
 	return nil
 }

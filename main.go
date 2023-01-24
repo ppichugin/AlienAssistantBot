@@ -10,25 +10,26 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/config"
 	"github.com/ppichugin/AlienAssistantBot/services/exchangerates"
 	"github.com/ppichugin/AlienAssistantBot/services/secretkeeper"
+	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
 func main() {
 
-	x := viper.New()
-	x.AddConfigPath("config")
-	err := x.ReadInConfig()
+	v := viper.New()
+	v.AddConfigPath("config")
+	err := v.ReadInConfig()
 	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %w", err))
+		log.Fatal(fmt.Errorf("fatal error config file: %w", err))
 	}
-	x.AutomaticEnv()
+	v.AutomaticEnv()
 	config.GlobConf = config.Configuration{
-		TelegramAPIToken:   x.GetString("TELEGRAM_APITOKEN"),
-		ExchangeRateAPIKey: x.GetString("APILayerKey"),
-		HostDB:             x.GetString("hostDB"),
-		PortDB:             x.GetString("portDB"),
-		UserDB:             x.GetString("userDB"),
-		PasswordDB:         x.GetString("passwordDB"),
-		NameDB:             x.GetString("dbname"),
+		TelegramAPIToken:   v.GetString("TELEGRAM_APITOKEN"),
+		ExchangeRateAPIKey: v.GetString("APILayerKey"),
+		HostDB:             v.GetString("hostDB"),
+		PortDB:             v.GetString("portDB"),
+		UserDB:             v.GetString("userDB"),
+		PasswordDB:         v.GetString("passwordDB"),
+		NameDB:             v.GetString("dbname"),
 	}
 
 	bot, err := tgBotApi.NewBotAPI(config.GlobConf.TelegramAPIToken)
@@ -74,10 +75,9 @@ func main() {
 			default:
 				msg.Text = config.ErrMsg
 			}
-			bot.Send(msg)
+			utils.SendMessage(update.Message.Chat.ID, msg.Text)
 		} else {
-			msg.Text = config.IncorrectCmdFormat
-			bot.Send(msg)
+			utils.SendMessage(update.Message.Chat.ID, config.IncorrectCmdFormat)
 		}
 	}
 }
