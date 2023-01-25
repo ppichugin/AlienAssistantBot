@@ -1,7 +1,7 @@
 -- install extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- create schema
+-- create table
 CREATE TABLE secrets
 (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -16,7 +16,6 @@ CREATE TABLE secrets
 
 
 -- This script creates a table called secrets with the following fields:
---
 -- * id: a serial primary key
 -- * name: the name of the secret (not null)
 -- * username: the username associated with the secret (not null)
@@ -25,3 +24,7 @@ CREATE TABLE secrets
 -- * expiration: the expiration date of the secret
 -- * reads_remaining: the number of times the secret can be read (not null)
 -- * owner: the owner of the secret
+
+-- populate DB with data
+-- INSERT INTO secrets (name, username, password, iv, expiration, reads_remaining, owner)
+-- VALUES ('')

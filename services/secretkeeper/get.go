@@ -48,6 +48,8 @@ func Get(args []string, update *tgbotapi.Update) error {
 		&secret.Owner,
 	)
 
+	// TODO: should stay in this mode, do not return
+
 	if errors.Is(err, sql.ErrNoRows) {
 		text := "secret not found"
 		utils.SendMessage(chatID, text)
