@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -53,12 +54,12 @@ func Get(args []string, update *tgbotapi.Update) error {
 	if errors.Is(err, sql.ErrNoRows) {
 		text := "secret not found"
 		utils.SendMessage(chatID, text)
-		return fmt.Errorf("%s: no rows in db (%s)", text, err.Error())
+		return fmt.Errorf("%s: no rows in db (%w)", text, err)
 	}
 	if err != nil {
 		text := "error retrieving secret"
 		utils.SendMessage(chatID, text)
-		return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
+		return fmt.Errorf("%s: something went wrong in DB (%w)", text, err)
 	}
 
 	// Check if the secret has expired, and if so - delete it.
@@ -68,9 +69,9 @@ func Get(args []string, update *tgbotapi.Update) error {
 		if _, err := db.Exec("DELETE FROM secrets WHERE id=$1", secret.ID); err != nil {
 			text := "Error deleting secret"
 			utils.SendMessage(chatID, text)
-			return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
+			return fmt.Errorf("%s: something went wrong in DB (%w)", text, err)
 		}
-		return fmt.Errorf("%s: and deleted from DB (%s)", text, err.Error())
+		return fmt.Errorf("%s: and deleted from DB (%w)", text, err)
 	}
 
 	// Check if the secret is for a single read only
@@ -86,10 +87,12 @@ func Get(args []string, update *tgbotapi.Update) error {
 	// Decrement the number of reads remaining
 	if secret.ReadsRemaining > 1 {
 		_, err := db.Exec("UPDATE secrets SET reads_remaining = reads_remaining - 1 WHERE id=$1", secret.ID)
+		secret.ReadsRemaining--
+		utils.SendMessage(chatID, "Reads Remaining decreased and now equal to: "+strconv.Itoa(secret.ReadsRemaining))
 		if err != nil {
 			text := "Error updating ReadsRemaining"
 			utils.SendMessage(chatID, text)
-			return fmt.Errorf("%s: something went wrong in DB (%s)", text, err.Error())
+			return fmt.Errorf("%s: something went wrong in DB (%w)", text, err)
 		}
 	}
 
