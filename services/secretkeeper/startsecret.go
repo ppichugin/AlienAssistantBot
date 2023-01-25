@@ -32,6 +32,7 @@ func StartSecret(update *tgBotApi.Update) {
 
 	err := model.NewDB(3)
 	if err != nil {
+		utils.SendMessage(chatID, err.Error())
 		log.Fatal(err)
 	}
 	db := config.GlobConf.Database

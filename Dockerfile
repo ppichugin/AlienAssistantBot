@@ -22,7 +22,7 @@ RUN adduser \
 WORKDIR /go/src/github.com/ppichugin/AlienAssistantBot/
 COPY . .
 RUN go get -d -v
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o alien-assitant-bot .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o alien-assistant-bot .
 
 ############################
 # STEP 2 build a small image
@@ -30,9 +30,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o alie
 FROM scratch
 # Set some image labels
 LABEL author="petr.pichugin@gmail.com"
-LABEL version="1.0"
-LABEL description="Telegram-bot backend software packed to docker image. \
-Telegram-bot link: https://t.me/AlienAssistantBot"
+LABEL description="Telegram-bot backend. https://t.me/AlienAssistantBot"
 # Import the user and group files from the builder.
 COPY --from=build /etc/passwd /etc/passwd
 COPY --from=build /etc/group /etc/group
@@ -45,4 +43,4 @@ COPY --from=build /go/src/github.com/ppichugin/AlienAssistantBot/ ./
 # Use an unprivileged user
 USER appuser:appuser
 # Run binary
-CMD ["./alien-assitant-bot"]
+CMD ["./alien-assistant-bot"]
