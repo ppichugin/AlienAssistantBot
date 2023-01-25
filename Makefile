@@ -10,7 +10,8 @@ build-push:
 	docker build -f Dockerfile.backend . -t $(TAG_NAME):$(VERSION)
 	docker image tag $(TAG_NAME):$(VERSION) $(TAG_NAME):latest
 	docker image push --all-tags $(TAG_NAME)
-	docker rmi $(docker images -f “dangling=true” -q)
+	docker image prune -f
+	#docker rmi $(docker images -f “dangling=true” -q)
 
 ## Run containers with the image pulled from Docker Hub
 run-pull:
@@ -19,6 +20,7 @@ run-pull:
 ## Run containers with full local re-build of backend part
 run-rebuild:
 	$(DOCKER_COMPOSE) -f docker-compose.full-rebuild.yml up -d --build
+	docker image prune -f
 	#docker rmi $(docker images -f “dangling=true” -q)
 
 ## Stop containers and keep volumes
