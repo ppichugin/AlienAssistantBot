@@ -2,7 +2,6 @@ package secretkeeper
 
 import (
 	"log"
-	"strings"
 	"time"
 
 	tgBotApi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -53,7 +52,7 @@ func StartSecret(update *tgBotApi.Update) {
 			continue
 		}
 		if update.Message.IsCommand() {
-			args = append(args, strings.Split(upd.Message.Text, " ")...)
+			args = append(args, utils.SplitArgs(upd.Message.Text)...)
 			key := args[0]
 			cmd := key[1:]
 			switch cmd {

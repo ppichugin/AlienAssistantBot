@@ -3,6 +3,7 @@ package utils
 import (
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -21,4 +22,8 @@ func SendMessage(chatID int64, text string) {
 func IsValidPair(s string) bool {
 	re := regexp.MustCompile("^[a-zA-Z]+/[a-zA-Z]+$") // `EUR/USD`
 	return re.MatchString(s)
+}
+
+func SplitArgs(s string) []string {
+	return strings.Fields(strings.TrimSpace(s))
 }
