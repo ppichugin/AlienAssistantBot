@@ -14,7 +14,7 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
-// Get retrieves secret from DB and decrypts it
+// Get retrieves secret from DB and decrypts it.
 func Get(args []string, update *tgbotapi.Update) error {
 	bot := config.GlobConf.BotAPIConfig
 	db := config.GlobConf.Database
@@ -110,6 +110,7 @@ func Get(args []string, update *tgbotapi.Update) error {
 	encryptionKey, err := GenCryptoKey(passphrase, bot)
 	if err != nil {
 		log.Println(err)
+
 		return err
 	}
 
@@ -117,6 +118,7 @@ func Get(args []string, update *tgbotapi.Update) error {
 	if err := secret.Decrypt(encryptionKey, passphrase); err != nil {
 		text := "Error decrypting secret"
 		utils.SendMessage(chatID, text)
+
 		return fmt.Errorf("%s: something went wrong Decrypt (%w)", text, err)
 	}
 
@@ -127,6 +129,7 @@ func Get(args []string, update *tgbotapi.Update) error {
 	if secret.Owner != "" {
 		response += fmt.Sprintf("\nOwner: %s", secret.Owner)
 	}
+
 	utils.SendMessage(chatID, response)
 	secret = Secret{}
 

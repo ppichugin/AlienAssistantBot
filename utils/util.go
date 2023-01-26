@@ -13,6 +13,7 @@ import (
 func SendMessage(chatID int64, text string) {
 	bot := config.GlobConf.BotAPIConfig
 	msg := tgbotapi.NewMessage(chatID, text)
+
 	_, err := bot.Send(msg)
 	if err != nil {
 		log.Println(err)
@@ -21,6 +22,7 @@ func SendMessage(chatID int64, text string) {
 
 func IsValidPair(s string) bool {
 	re := regexp.MustCompile("^[a-zA-Z]+/[a-zA-Z]+$") // `EUR/USD`
+
 	return re.MatchString(s)
 }
 

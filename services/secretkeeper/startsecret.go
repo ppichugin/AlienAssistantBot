@@ -10,8 +10,6 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/config"
 	"github.com/ppichugin/AlienAssistantBot/model"
 	"github.com/ppichugin/AlienAssistantBot/utils"
-
-	_ "github.com/lib/pq"
 )
 
 // Secret represents a secret saved in the database
@@ -46,15 +44,18 @@ func StartSecret(update *tgBotApi.Update) {
 		if update.Message == nil {
 			continue
 		}
+
 		if !upd.Message.IsCommand() {
 			utils.SendMessage(chatID, config.IncorrectCmdFormat)
 			utils.SendMessage(chatID, "Please repeat")
 			continue
 		}
+
 		if update.Message.IsCommand() {
 			args = append(args, utils.SplitArgs(upd.Message.Text)...)
 			key := args[0]
 			cmd := key[1:]
+
 			switch cmd {
 			case "save":
 				err := Save(args, &upd)
@@ -69,6 +70,7 @@ func StartSecret(update *tgBotApi.Update) {
 			case "menu":
 				return
 			}
+			
 			args = make([]string, 0, 7)
 		}
 	}

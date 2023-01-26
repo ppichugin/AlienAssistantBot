@@ -21,6 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Errorf("fatal error config file: %w", err))
 	}
+	
 	v.AutomaticEnv()
 	config.GlobConf = config.Configuration{
 		TelegramAPIToken:   v.GetString("TELEGRAM_APITOKEN"),
@@ -54,6 +55,7 @@ func main() {
 		}
 
 		msg := tgBotApi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+
 		if update.Message.IsCommand() {
 			switch update.Message.Command() {
 			case "start":
@@ -75,6 +77,7 @@ func main() {
 			default:
 				msg.Text = config.ErrMsg
 			}
+
 			utils.SendMessage(update.Message.Chat.ID, msg.Text)
 		} else {
 			utils.SendMessage(update.Message.Chat.ID, config.IncorrectCmdFormat)

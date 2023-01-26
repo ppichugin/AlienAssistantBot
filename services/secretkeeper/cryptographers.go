@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -14,16 +13,18 @@ import (
 )
 
 // GenCryptoKey generates a cryptographic key from the user's passphrase.
-// The key that is generated from this function is of 32 bytes (AES-256 bits)
+// The key that is generated from this function is of 32 bytes (AES-256 bits).
 func GenCryptoKey(password string, bot *tgbotapi.BotAPI) ([]byte, error) {
 	cost := 1 << 14 // Controls the CPU/memory cost (power of two: 2^14)
 	rounds := 8     // Number of rounds
 	par := 1        // Number of goroutines
 	keyLen := 32    // Length of the derived key, in bytes
+
 	key, err := scrypt.Key([]byte(password), nil, cost, rounds, par, keyLen)
 	if err != nil {
 		return nil, fmt.Errorf("error generating CryptoKey: %w", err)
 	}
+
 	return key, nil
 }
 
@@ -72,7 +73,7 @@ func (s *Secret) Decrypt(key []byte, passphrase string) error {
 	passwordBytes = unpad(passwordBytes)
 
 	if string(passwordBytes) != passphrase {
-		return errors.New("invalid passphrase")
+		return fmt.Errorf("invalid passphrase (%s)", passphrase)
 	}
 	s.Password = string(passwordBytes)
 

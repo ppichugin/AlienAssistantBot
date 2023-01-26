@@ -12,7 +12,7 @@ import (
 	"github.com/ppichugin/AlienAssistantBot/utils"
 )
 
-// Save encrypts secret and saves it to DB
+// Save encrypts secret and saves it to DB.
 func Save(args []string, update *tgbotapi.Update) error {
 	bot := config.GlobConf.BotAPIConfig
 	db := config.GlobConf.Database
@@ -26,8 +26,6 @@ func Save(args []string, update *tgbotapi.Update) error {
 	name := args[1]
 	username := args[2]
 	passphrase := args[3]
-
-	// TODO: remove any double/triple spaces between args
 
 	expiration := time.Date(3000, time.December, 31, 23, 59, 0, 0, time.UTC)
 	if len(args) > 4 {
@@ -74,6 +72,7 @@ func Save(args []string, update *tgbotapi.Update) error {
 
 	if err := secret.Encrypt(encryptionKey); err != nil {
 		utils.SendMessage(chatID, err.Error())
+
 		return fmt.Errorf("error in encryption module: %w", err)
 	}
 

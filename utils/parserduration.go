@@ -7,7 +7,7 @@ import (
 )
 
 // Duration parses the given string to a time.Duration object.
-// Example: "P12Y4MT15M" where T is a separator for Time (minutes, seconds)
+// Example: "P12Y4MT15M" where T is a separator for Time (minutes, seconds).
 func Duration(str string) time.Duration {
 	durationRegex := regexp.MustCompile(`P(?P<years>\d+Y)?(?P<months>\d+M)?(?P<days>\d+D)?T?(?P<hours>\d+H)?(?P<minutes>\d+M)?(?P<seconds>\d+S)?`)
 	matches := durationRegex.FindStringSubmatch(str)
@@ -27,9 +27,11 @@ func parseInt64(value string) int64 {
 	if len(value) == 0 {
 		return 0
 	}
+
 	parsed, err := strconv.Atoi(value[:len(value)-1])
 	if err != nil {
 		return 0
 	}
+	
 	return int64(parsed)
 }
