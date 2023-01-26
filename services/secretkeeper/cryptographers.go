@@ -65,26 +65,37 @@ func (s *Secret) decrypt(key []byte, passphrase string) error {
 	if err != nil {
 		return err
 	}
-
 	stream := cipher.NewCTR(block, s.IV)
-
-	passphraseBytes, err := base64.StdEncoding.DecodeString(s.Passphrase)
+	passphraseBytes, err := decryptPartial(s.Passphrase, stream)
 	if err != nil {
 		return err
 	}
-
-	// Decrypt the passphrase.
-	stream.XORKeyStream(passphraseBytes, passphraseBytes)
-	// Removes padding.
-	passphraseBytes = unpad(passphraseBytes)
 
 	if string(passphraseBytes) != passphrase {
 		return ErrPassphrase
 	}
 
+	messageBytes, err := decryptPartial(s.Message, stream)
+	if err != nil {
+		return err
+	}
+
 	s.Passphrase = string(passphraseBytes)
+	s.Message = string(messageBytes)
 
 	return nil
+}
+
+func decryptPartial(strToDecrypt string, stream cipher.Stream) ([]byte, error) {
+	decodeString, err := base64.StdEncoding.DecodeString(strToDecrypt)
+	if err != nil {
+		return nil, err
+	}
+
+	stream.XORKeyStream(decodeString, decodeString)
+	decodeString = unpad(decodeString)
+
+	return decodeString, nil
 }
 
 // pad adds padding to input slice.

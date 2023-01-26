@@ -107,13 +107,13 @@ func get(args []string, update *tgbotapi.Update) error {
 			return fmt.Errorf("%w: error updating reads_remaining in DB", err)
 		}
 
-		secret.ReadsRemaining--
 		utils.SendMessage(chatID, "Reads Remaining decreased.")
 	}
 
 	// Send the secret back to the user
-	utils.SendMessage(chatID, secret.String())
-	secret = Secret{} //nolint:wsl
+	secret.ReadsRemaining--
+	utils.SendMessage(chatID, secret.String()) // TODO: markdown formatting
+	secret = Secret{}                          //nolint:wsl
 
 	return nil
 }
