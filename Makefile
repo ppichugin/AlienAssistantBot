@@ -2,7 +2,7 @@
 DOCKER_COMPOSE = docker-compose
 APP_NAME = alien-assistant-bot
 TAG_NAME = petrodev/$(APP_NAME)
-VERSION = 0.2.0
+VERSION = 0.2.1
 
 # Targets
 ## Build backend of the application and pull it to Docker Hub

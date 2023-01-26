@@ -65,7 +65,9 @@ func (s *Secret) decrypt(key []byte, passphrase string) error {
 	if err != nil {
 		return err
 	}
+	
 	stream := cipher.NewCTR(block, s.IV)
+
 	passphraseBytes, err := decryptPartial(s.Passphrase, stream)
 	if err != nil {
 		return err

@@ -17,12 +17,14 @@ func main() {
 
 	v := viper.New()
 	v.AddConfigPath("config")
+
 	err := v.ReadInConfig()
 	if err != nil {
 		log.Fatal(fmt.Errorf("fatal error config file: %w", err))
 	}
-	
+
 	v.AutomaticEnv()
+
 	config.GlobConf = config.Configuration{
 		TelegramAPIToken:   v.GetString("TELEGRAM_APITOKEN"),
 		ExchangeRateAPIKey: v.GetString("APILayerKey"),
