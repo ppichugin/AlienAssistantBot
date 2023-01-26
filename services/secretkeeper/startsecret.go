@@ -30,14 +30,20 @@ func StartSecret(update *tgBotApi.Update) {
 	err := model.NewDB(3)
 	if err != nil {
 		utils.SendMessage(chatID, err.Error())
-		log.Fatal(err)
+		log.Println(err)
 	}
+
 	db := config.GlobConf.Database
+	if db == nil {
+		return
+	}
+
 	defer db.Close()
 
 	utils.SendMessage(chatID, "You are in Secrets Keeper mode")
 	utils.SendMessage(chatID, config.KeeperHelpMsg)
-	var args = make([]string, 0, 7)
+
+	args := make([]string, 0, 7)
 
 	// Listen commands in secrets mode
 	for upd := range *config.GlobConf.BotUpdatesCh {
@@ -48,6 +54,7 @@ func StartSecret(update *tgBotApi.Update) {
 		if !upd.Message.IsCommand() {
 			utils.SendMessage(chatID, config.IncorrectCmdFormat)
 			utils.SendMessage(chatID, "Please repeat")
+
 			continue
 		}
 
@@ -70,7 +77,7 @@ func StartSecret(update *tgBotApi.Update) {
 			case "menu":
 				return
 			}
-			
+
 			args = make([]string, 0, 7)
 		}
 	}
