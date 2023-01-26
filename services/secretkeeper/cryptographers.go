@@ -8,19 +8,18 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"golang.org/x/crypto/scrypt"
 )
 
 // GenCryptoKey generates a cryptographic key from the user's passphrase.
 // The key that is generated from this function is of 32 bytes (AES-256 bits).
-func GenCryptoKey(password string, bot *tgbotapi.BotAPI) ([]byte, error) {
-	cost := 1 << 14 // Controls the CPU/memory cost (power of two: 2^14)
+func GenCryptoKey(passphrase string) ([]byte, error) {
+	cost := 1 << 14 //nolint:gomnd    // Controls the CPU/memory cost (power of two: 2^14)
 	rounds := 8     // Number of rounds
 	par := 1        // Number of goroutines
 	keyLen := 32    // Length of the derived key, in bytes
 
-	key, err := scrypt.Key([]byte(password), nil, cost, rounds, par, keyLen)
+	key, err := scrypt.Key([]byte(passphrase), nil, cost, rounds, par, keyLen)
 	if err != nil {
 		return nil, fmt.Errorf("error generating CryptoKey: %w", err)
 	}
@@ -28,8 +27,8 @@ func GenCryptoKey(password string, bot *tgbotapi.BotAPI) ([]byte, error) {
 	return key, nil
 }
 
-// Encrypt encrypts the secret using AES in CTR mode.
-func (s *Secret) Encrypt(key []byte) error {
+// encrypt encrypts the secret using AES in CTR mode.
+func (s *Secret) encrypt(key []byte) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return err
@@ -42,48 +41,57 @@ func (s *Secret) Encrypt(key []byte) error {
 	}
 
 	stream := cipher.NewCTR(block, s.IV)
-	passwordBytes := []byte(s.Password)
+	passphraseBytes := []byte(s.Passphrase)
+	messageBytes := []byte(s.Message)
 
 	// Add padding.
-	passwordBytes = pad(passwordBytes)
+	passphraseBytes = pad(passphraseBytes)
+	messageBytes = pad(messageBytes)
 
-	// Encrypt the password.
-	stream.XORKeyStream(passwordBytes, passwordBytes)
-	s.Password = base64.StdEncoding.EncodeToString(passwordBytes)
+	// encrypt the passphrase.
+	stream.XORKeyStream(passphraseBytes, passphraseBytes)
+	s.Passphrase = base64.StdEncoding.EncodeToString(passphraseBytes)
+
+	// encrypt the message.
+	stream.XORKeyStream(messageBytes, messageBytes)
+	s.Message = base64.StdEncoding.EncodeToString(messageBytes)
 
 	return nil
 }
 
-// Decrypt decrypts the secret using AES in CTR mode.
-func (s *Secret) Decrypt(key []byte, passphrase string) error {
+// decrypt decrypts the secret using AES in CTR mode.
+func (s *Secret) decrypt(key []byte, passphrase string) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return err
 	}
 
 	stream := cipher.NewCTR(block, s.IV)
-	passwordBytes, err := base64.StdEncoding.DecodeString(s.Password)
+
+	passphraseBytes, err := base64.StdEncoding.DecodeString(s.Passphrase)
 	if err != nil {
 		return err
 	}
 
-	// Decrypt the password.
-	stream.XORKeyStream(passwordBytes, passwordBytes)
+	// Decrypt the passphrase.
+	stream.XORKeyStream(passphraseBytes, passphraseBytes)
 	// Removes padding.
-	passwordBytes = unpad(passwordBytes)
+	passphraseBytes = unpad(passphraseBytes)
 
-	if string(passwordBytes) != passphrase {
-		return fmt.Errorf("invalid passphrase (%s)", passphrase)
+	if string(passphraseBytes) != passphrase {
+		return ErrPassphrase
 	}
-	s.Password = string(passwordBytes)
+
+	s.Passphrase = string(passphraseBytes)
 
 	return nil
 }
 
-// pad add padding to input slice.
+// pad adds padding to input slice.
 func pad(src []byte) []byte {
 	padLen := aes.BlockSize - len(src)%aes.BlockSize
 	pad := bytes.Repeat([]byte{byte(padLen)}, padLen)
+
 	return append(src, pad...)
 }
 
@@ -93,9 +101,11 @@ func unpad(src []byte) []byte {
 	if n == 0 {
 		return nil
 	}
+
 	padLen := int(src[n-1])
 	if padLen > n {
 		return nil
 	}
+
 	return src[:n-padLen]
 }

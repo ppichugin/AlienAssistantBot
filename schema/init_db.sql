@@ -5,9 +5,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE secrets
 (
     id              uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-    name            varchar(255) NOT NULL,
-    username        varchar(255) NOT NULL,
-    password        bytea        NOT NULL,
+    title           varchar(255) NOT NULL,
+    message         varchar(255) NOT NULL,
+    passphrase      bytea        NOT NULL,
     iv              bytea        NOT NULL,
     expiration      timestamp with time zone,
     reads_remaining integer      NOT NULL,
