@@ -1,5 +1,7 @@
 # "Alien Assistant" - Telegram Bot
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/ppichugin/AlienAssistantBot)](https://goreportcard.com/report/github.com/ppichugin/AlienAssistantBot)
+
 ---
 
 ### The functionality:
